@@ -1,0 +1,15 @@
+services:
+  esg-eficiencia-energetica-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: esg-eficiencia-energetica-api
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_PORT: 8080
+      ORACLE_URL: ${ORACLE_URL:-jdbc:oracle:thin:@oracle.fiap.com.br:1521:ORCL}
+      ORACLE_USER: ${ORACLE_USER:-rm567059}
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:-fiap26}
+      JWT_SECRET: ${JWT_SECRET:-esg-eficiencia-energetica-secret-key-2026}
+    restart: unless-stopped

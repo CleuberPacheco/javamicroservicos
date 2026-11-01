@@ -1,0 +1,535 @@
+{
+  "info": {
+    "_postman_id": "a7f9c4e1-8b2d-4c5a-9e3f-1d2c3b4a5e6f",
+    "name": "ESG - Tema 1: Eficiencia Energetica e Sustentabilidade (Spring Boot + Oracle)",
+    "description": "Colecao completa de endpoints RESTful do microsservico de Eficiencia Energetica e Sustentabilidade (Monitoramento de consumo em kWh, Alertas automaticos de limite ultrapassado e Integracao IoT para desligamento automatico de equipamentos ociosos).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "jwtToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwtToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Autenticacao (Spring Security JWT)",
+      "item": [
+        {
+          "name": "POST /auth/register - Cadastrar Usuario ADMIN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('jwtToken', jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Gestor ESG FIAP\",\n  \"email\": \"gestor@esg.com.br\",\n  \"senha\": \"123456\",\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Cadastra um novo usuario com senha criptografada em BCrypt e salva automaticamente o token JWT na variavel {{jwtToken}} da colecao."
+          }
+        },
+        {
+          "name": "POST /auth/login - Autenticar e Obter Token JWT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('jwtToken', jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"gestor@esg.com.br\",\n  \"senha\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Realiza login e salva automaticamente o Token JWT na variavel {{jwtToken}}."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Setores e Metas de Consumo",
+      "item": [
+        {
+          "name": "POST /setores - Cadastrar Setor Monitorado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Centro de Operacoes Sustentaveis\",\n  \"localizacao\": \"Bloco E - 1o Andar\",\n  \"responsavel\": \"Fernanda Lima\",\n  \"limiteMensalKwh\": 6000.00,\n  \"limiteDiarioKwh\": 200.00,\n  \"ativo\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/setores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "setores"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /setores - Listar Setores (Paginado)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/setores?page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "setores"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /setores/{id} - Buscar Setor por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/setores/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "setores",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /setores/{id} - Atualizar Limites do Setor",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Data Center Principal (Otimizado)\",\n  \"localizacao\": \"Bloco A - Subsolo 1\",\n  \"responsavel\": \"Carlos Mendes\",\n  \"limiteMensalKwh\": 13500.00,\n  \"limiteDiarioKwh\": 450.00,\n  \"ativo\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/setores/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "setores",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /setores/{id} - Excluir Setor",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/setores/4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "setores",
+                "4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Equipamentos e Sensores IoT",
+      "item": [
+        {
+          "name": "POST /equipamentos - Cadastrar Sensor/Equipamento IoT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"setorId\": 2,\n  \"codigoSensor\": \"IOT-ILUM-010\",\n  \"nome\": \"Painel LED Inteligente Ala Norte\",\n  \"tipoEquipamento\": \"ILUMINACAO\",\n  \"potenciaWatts\": 2200.00,\n  \"limiteConsumoHoraKwh\": 2.20,\n  \"statusOperacional\": \"LIGADO\",\n  \"desligamentoAutomatico\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/equipamentos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "equipamentos"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /equipamentos - Listar Equipamentos IoT",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/equipamentos?page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "equipamentos"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /equipamentos/{id} - Buscar Equipamento por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/equipamentos/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "equipamentos",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /equipamentos/{id} - Atualizar Equipamento IoT",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"setorId\": 2,\n  \"codigoSensor\": \"IOT-CORP-002\",\n  \"nome\": \"Central Ar Condicionado VRF Inverter\",\n  \"tipoEquipamento\": \"CLIMATIZACAO\",\n  \"potenciaWatts\": 5000.00,\n  \"limiteConsumoHoraKwh\": 5.00,\n  \"statusOperacional\": \"LIGADO\",\n  \"desligamentoAutomatico\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/equipamentos/2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "equipamentos",
+                "2"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /equipamentos/{id}/desligar-ocioso - Acionar Desligamento Remoto IoT",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/equipamentos/1/desligar-ocioso",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "equipamentos",
+                "1",
+                "desligar-ocioso"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /equipamentos/{id} - Remover Equipamento IoT",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/equipamentos/4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "equipamentos",
+                "4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Monitoramento de Consumo e Regra IoT",
+      "item": [
+        {
+          "name": "POST /leituras-consumo - Registrar Consumo (Gera Alerta + Desligamento Auto se Ocioso >= 30m)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"equipamentoId\": 2,\n  \"consumoKwh\": 8.750,\n  \"tempoOciosoMinutos\": 35,\n  \"observacao\": \"Leitura de telemetria IoT: consumo acima da meta (8.75 kWh) e 35 min de ociosidade\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/leituras-consumo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leituras-consumo"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /leituras-consumo - Listar Historico Geral de Consumo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/leituras-consumo?page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leituras-consumo"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /leituras-consumo/setor/{setorId} - Historico de Consumo por Setor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/leituras-consumo/setor/2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leituras-consumo",
+                "setor",
+                "2"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Alertas Automaticos e Indicadores ESG",
+      "item": [
+        {
+          "name": "GET /alertas - Listar Todos os Alertas Automaticos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/alertas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alertas"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /alertas?status=ABERTO - Filtrar Alertas em Aberto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/alertas?status=ABERTO",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alertas"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ABERTO"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /alertas/{id}/resolver - Resolver Alerta de Consumo",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"acaoExecutada\": \"Ajuste de setpoint do termostato para 23C e manutencao preventiva nos filtros do VRF\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/alertas/1/resolver",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alertas",
+                "1",
+                "resolver"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /indicadores-sustentabilidade - Painel Consolidado ESG",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/indicadores-sustentabilidade",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "indicadores-sustentabilidade"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

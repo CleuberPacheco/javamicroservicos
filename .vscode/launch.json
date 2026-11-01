@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Rodar ESG Eficiencia Energetica API",
+            "request": "launch",
+            "mainClass": "br.com.fiap.esg.EsgEficienciaEnergeticaApplication",
+            "projectName": "esg-eficiencia-energetica",
+            "shortenCommandLine": "none",
+            "console": "integratedTerminal"
+        }
+    ]
+}
