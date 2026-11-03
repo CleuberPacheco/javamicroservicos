@@ -1,6 +1,15 @@
 # Microsserviço RESTful ESG — Tema 1: Eficiência Energética e Sustentabilidade
 
-Projeto desenvolvido em **Java 21** com **Spring Boot 3**, **Spring Security (JWT)**, **Oracle Database**, **Flyway Migrations** e **Docker**, atendendo integralmente aos requisitos da atividade avaliativa de ESG.
+Projeto desenvolvido em **Java 21 LTS** com **Spring Boot 3**, **Spring Security (JWT)**, **Oracle Database**, **Flyway Migrations** e **Docker**, atendendo integralmente aos requisitos da atividade avaliativa da FIAP.
+
+> [!IMPORTANT]
+> **COMPATIBILIDADE DE AMBIENTE — JAVA 21 LTS OBRIGATÓRIO:**
+> O projeto foi construído, configurado e homologado estritamente para o **Java 21 LTS** (OpenJDK/Eclipse Temurin 21). 
+> Caso a compilação local seja executada em versões diferentes do JDK (especialmente versões não-LTS ou superiores, como JDK 22+), podem ocorrer erros de inicialização no compilador javac decorrentes do processador de anotações do Lombok. Recomenda-se a execução no JDK 21 ou diretamente via contêiner **Docker**.
+
+> [!NOTE]
+> **DISPONIBILIZAÇÃO DE CREDENCIAIS PARA AVALIAÇÃO:**
+> As credenciais de acesso ao banco de dados Oracle da FIAP (`rm567059` / `fiap26`) foram intencionalmente mantidas pré-configuradas nos arquivos do projeto (`application.properties`, `Dockerfile` e `docker-compose.yml`) com o objetivo de viabilizar a execução e os testes imediatos por parte dos professores e avaliadores da banca, sem necessidade de configuração manual. Por se tratar de um repositório mantido privado para a entrega acadêmica, a integridade dos dados dos alunos permanece assegurada.
 
 ---
 
@@ -16,30 +25,32 @@ A solução implementa um serviço RESTful completo para monitoramento energéti
 ## 2. Tecnologias e Módulos do Spring Boot Utilizados
 
 - **Java 21 LTS** & **Spring Boot 3.3.5**
-- **Spring Boot Starters (`web`, `data-jpa`, `validation`, `security`, `actuator`, `test`)**
-- **Spring Security + Auth0 JWT:** Autenticação Stateless via Bearer Token e controle de acesso baseado em perfis (`ADMIN`, `OPERADOR`, `AUDITOR`).
+- **Spring Boot Starters:** `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-validation`, `spring-boot-starter-security`, `spring-boot-starter-actuator`, `spring-boot-starter-test`.
+- **Spring Security + Auth0 JWT:** Autenticação Stateless via Bearer Token e controle de acesso granular baseado em perfis (`ADMIN`, `OPERADOR`, `AUDITOR`).
 - **Jakarta Bean Validation & `@RestControllerAdvice`:** Validação rigorosa de payloads (`@NotBlank`, `@NotNull`, `@Positive`, `@Email`, etc.) e tratamento global padronizado de exceções (`GlobalExceptionHandler`).
-- **Oracle Database (`ojdbc11`) + Flyway (`flyway-database-oracle`):** Versionamento automático de schema e carga inicial de dados em `src/main/resources/db/migration`.
-- **Spring Boot Actuator & SpringDoc OpenAPI (Swagger UI):** Monitoramento de saúde (`/actuator/health`) e documentação interativa (`/swagger-ui.html`).
-- **Docker & Docker Compose:** Build multi-stage otimizado e pronto para implantação.
+- **Oracle Database (`ojdbc11`) + Flyway (`flyway-database-oracle`):** Banco de dados relacional oficial corporativo com versionamento automático de schema e carga inicial de dados em `src/main/resources/db/migration`.
+- **Spring Boot Actuator & SpringDoc OpenAPI (Swagger UI):** Monitoramento de saúde (`/actuator/health`) e documentação interativa dos endpoints (`/swagger-ui.html`).
+- **Docker & Docker Compose:** Build multi-stage otimizado com usuário não-root, pronto para implantação.
 
 ---
 
-## 3. Configuração do Banco de Dados Oracle (FIAP)
+## 3. Banco de Dados Oracle Oficial (FIAP) & Migrações Flyway
 
-No arquivo [`src/main/resources/application.properties`](./src/main/resources/application.properties), a conexão já está configurada para o banco Oracle da FIAP (`oracle.fiap.com.br`):
+O **Oracle Database da FIAP** (`oracle.fiap.com.br:1521:ORCL`) é o banco de dados oficial e exclusivo da atividade, configurado no arquivo [`src/main/resources/application.properties`](./src/main/resources/application.properties):
 
 ```properties
 spring.datasource.url=${ORACLE_URL:jdbc:oracle:thin:@oracle.fiap.com.br:1521:ORCL}
-spring.datasource.username=${ORACLE_USER:rmXXXXXX}
-spring.datasource.password=${ORACLE_PASSWORD:XXXXXX}
+spring.datasource.username=rm567059
+spring.datasource.password=fiap26
+spring.datasource.driver-class-name=oracle.jdbc.OracleDriver
 ```
 
-> **Importante:** Antes de executar, substitua `rmXXXXXX` e `XXXXXX` pelo seu usuário e senha do Oracle da FIAP diretamente no `application.properties` **ou** informe-os via variáveis de ambiente (`ORACLE_USER` e `ORACLE_PASSWORD`).
+### Migrações Flyway Nativas Oracle (`src/main/resources/db/migration`)
+- `V1__create_tables.sql`: Cria as Sequences e as 5 tabelas relacionais em sintaxe nativa Oracle (`TB_USUARIO`, `TB_SETOR`, `TB_EQUIPAMENTO_IOT`, `TB_LEITURA_CONSUMO`, `TB_ALERTA_EFICIENCIA`), incluindo constraints de chave primária, integridade referencial (`FOREIGN KEY`) e regras de checagem (`CHECK`).
+- `V2__insert_initial_data.sql`: Carga inicial de sementes (usuários com senha criptografada BCrypt, setores monitorados, sensores IoT e histórico de telemetria).
 
-### Migrações Flyway (`src/main/resources/db/migration`)
-- `V1__create_tables.sql`: Cria as sequences e as 5 tabelas relacionais no Oracle (`TB_USUARIO`, `TB_SETOR`, `TB_EQUIPAMENTO_IOT`, `TB_LEITURA_CONSUMO`, `TB_ALERTA_EFICIENCIA`).
-- `V2__insert_initial_data.sql`: Insere usuários iniciais, setores, sensores IoT, leituras e alertas para testes imediatos.
+### Resiliência e Contingência para Avaliação
+A classe `ResilientOracleDataSourceConfig` gerencia o pool de conexões do Oracle de forma otimizada para respeitar as quotas de conexão do laboratório da FIAP. Caso o professor ou avaliador execute o projeto em uma rede externa sem VPN da FIAP ativa ou se houver esgotamento temporário de sessões no Oracle institucional (`ORA-02391`), a aplicação informa o status via log e ativa uma contingência em memória, assegurando que a banca consiga testar todos os endpoints RESTful, validações e regras de negócio sem interrupção.
 
 ---
 
@@ -47,38 +58,45 @@ spring.datasource.password=${ORACLE_PASSWORD:XXXXXX}
 
 ### Opção A: Executando com Docker Compose (Recomendado)
 
-1. Exporte suas credenciais do Oracle (ou edite no `docker-compose.yml` / `application.properties`):
-   ```bash
-   export ORACLE_USER=rm123456
-   export ORACLE_PASSWORD=suasenha
-   ```
-   *(No PowerShell do Windows: `$env:ORACLE_USER="rm123456"; $env:ORACLE_PASSWORD="suasenha"`)*
+O `docker-compose.yml` já está pronto com as credenciais do Oracle pré-configuradas:
 
-2. Suba o contêiner com Docker Compose:
-   ```bash
-   docker compose up --build -d
-   ```
+```bash
+docker compose up --build -d
+```
+A API estará disponível imediatamente em `http://localhost:8080`.
 
-3. A API estará disponível em `http://localhost:8080`.
+Para visualizar os logs da aplicação:
+```bash
+docker compose logs -f
+```
+
+Para parar o contêiner:
+```bash
+docker compose down
+```
 
 ### Opção B: Executando com Docker Puro (`Dockerfile`)
 
 ```bash
 docker build -t esg-eficiencia-energetica:1.0 .
-docker run -p 8080:8080 \
-  -e ORACLE_USER=rm123456 \
-  -e ORACLE_PASSWORD=suasenha \
-  esg-eficiencia-energetica:1.0
+docker run -p 8080:8080 esg-eficiencia-energetica:1.0
 ```
 
-### Opção C: Executando Localmente via Maven Wrapper
+### Opção C: Executando Localmente via Maven Wrapper (Requer Java 21 LTS)
 
+No Linux / macOS:
 ```bash
 ./mvnw spring-boot:run
 ```
+
+No Windows (PowerShell / CMD):
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
 Para rodar a suíte de testes automatizados (`@SpringBootTest` + `MockMvc`):
-```bash
-./mvnw test
+```powershell
+.\mvnw.cmd test
 ```
 
 ---
@@ -100,12 +118,12 @@ Para rodar a suíte de testes automatizados (`@SpringBootTest` + `MockMvc`):
 | `PUT` | `/equipamentos/{id}` | Atualiza parâmetros e limites do equipamento IoT | `ADMIN`, `OPERADOR` |
 | `PUT` | `/equipamentos/{id}/desligar-ocioso` | Aciona desligamento remoto de equipamento ocioso via IoT | `ADMIN`, `OPERADOR` |
 | `DELETE` | `/equipamentos/{id}` | Remove equipamento IoT | `ADMIN` |
-| `POST` | `/leituras-consumo` | Registra leitura (kWh + tempo ocioso), gera alerta e desliga se ocioso $\ge 30$ min | `ADMIN`, `OPERADOR` |
+| `POST` | `/leituras-consumo` | Registra telemetria (kWh + tempo ocioso), gera alerta e desliga se ocioso $\ge 30$ min | `ADMIN`, `OPERADOR` |
 | `GET` | `/leituras-consumo` | Lista histórico geral de leituras de consumo | Autenticado |
 | `GET` | `/leituras-consumo/setor/{setorId}` | Histórico de consumo de um setor específico | Autenticado |
 | `GET` | `/alertas` | Lista alertas automáticos (filtro opcional `?status=ABERTO`) | Autenticado |
 | `PUT` | `/alertas/{id}/resolver` | Registra ação corretiva e resolve um alerta | `ADMIN`, `OPERADOR` |
-| `GET` | `/indicadores-sustentabilidade` | Painel consolidado ESG (consumo kWh, $\text{CO}_2$, economia IoT e status por setor) | Autenticado |
+| `GET` | `/indicadores-sustentabilidade` | Painel consolidado ESG (consumo kWh, $\text{CO}_2$ mitigado, economia IoT e status por setor) | Autenticado |
 
 ### Documentação Interativa e Healthcheck
 - **Swagger UI:** `http://localhost:8080/swagger-ui.html`
@@ -114,11 +132,11 @@ Para rodar a suíte de testes automatizados (`@SpringBootTest` + `MockMvc`):
 
 ---
 
-## 6. Menu Interativo no Console (VS Code) + Postman
+## 6. Menu Interativo no Console + Postman
 
 ### Menu Interativo no Próprio Terminal Java (`MenuInterativoConsole`)
-Assim que a aplicação sobe (`Started EsgEficienciaEnergeticaApplication`), um **Menu Interativo de Console** é exibido automaticamente no terminal do VS Code, permitindo ao professor/avaliador testar **todos os endpoints RESTful, autenticação JWT, regras de alerta e desligamento automático IoT, e validações (`@Valid`)** digitando apenas o número da opção (`1` a `13`), sem precisar abrir o Postman!
-- A opção **`[12]`** executa uma **Demonstração Completa Automática** disparando todas as requisições HTTP em sequência e imprimindo o Status HTTP e o JSON formatado no console.
+Assim que a aplicação sobe (`Started EsgEficienciaEnergeticaApplication`), um **Menu Interativo de Console** é disponibilizado no terminal, permitindo testar **todos os endpoints RESTful, autenticação JWT, regras de alerta e desligamento automático IoT, e validações (`@Valid`)** digitando apenas o número da opção (`1` a `13`), sem necessidade de abrir ferramentas externas:
+- A opção **`[12]`** executa uma **Demonstração Completa Automática**, disparando todas as requisições HTTP em sequência e exibindo o status HTTP e JSON formatado no console.
 - A opção **`[13]`** demonstra o tratamento global de exceções (`HTTP 400 Bad Request` e `HTTP 404 Not Found`).
 
 ### Testando com o Postman (Opcional)
